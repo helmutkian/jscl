@@ -47,3 +47,64 @@
 
 (setf #j:eval_in_lisp (lambda (form) (eval (read-from-string form))))
 
+
+(defmacro bind (fn &rest args)
+  (let* ((has-this
+	  (and (listp fn) (eql (first fn) 'oget)))
+	 (this-arg
+	  (if (and has-this (nth 3 fn))
+	      (butlast fn)
+	      '*root*))
+	 (bind-fn
+	  (append (if has-this fn (list 'oget fn))
+		  '("bind"))))
+    `(,bind-fn ,this-arg ,@args)))
+
+(defun alist-to-js-object (alist &key (key #'car) (value #'cadr))
+  (let ((obj (new)))
+    (dolist (key-value alist obj)
+      (setf (oget obj (funcall key key-value))
+	    (funcall value key-value)))))
+
+(defun hash-table-to-js-object (hash-table &key (key #'identity) (value #'identity))
+  (let ((obj (new)))
+    (maphash (lambda (hash-key hash-value)
+	       (setf (oget obj (funcall key hash-key))
+		     (funcall value hash-value)))
+	     hash-table)
+    object))	     
+
+(defmacro js-object (&body body)
+  `(alist-to-js-object
+    (list ,@(mapcar (lambda (key-value) `(list ,@key-value)) body))))
+
+(defmacro do-js-object ((binding-form js-object &optional result-form) &body body)
+  (destructuring-bind (key-var &optional value-var)
+      (if (listp binding-form) binding-form (list binding-form))
+    (let ((keys (gensym "keys"))
+	  (i (gensym "i"))
+	  (len (gensym "len")))
+      `(let* ((,keys ((oget *root* "Object" "keys") ,js-object))
+	      (,len (length ,keys)))
+	 (dotimes (,i ,len ,result-form)
+	   (let* ((,key-var (string (aref ,keys ,i)))
+		  ,@(when value-var `((,value-var (oget ,js-object ,key-var)))))
+	     ,@body))))))
+
+(defun map-js-object (function js-object)
+  (do-js-object ((key value) js-object)
+    (funcall function key value)))
+
+(defun js-object-to-alist (js-object &key (make-assoc #'list))
+  (let ((alist '()))
+    (do-js-object ((js-key js-value) js-object alist)
+      (push (funcall make-assoc js-key js-value) alist))))
+
+(defun js-object-to-hash-table (js-object &key (key #'identity) (value #'identity) (test #'string=))
+  (let ((hash-table (make-hash-table :test test)))
+    (do-js-object ((js-key js-value) js-object hash-table)
+      (setf (gethash hash-table (funcall key js-key))
+	    (funcall value js-value)))))
+  
+
+    
