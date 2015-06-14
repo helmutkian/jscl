@@ -89,9 +89,9 @@
 		      (> i 0))
 		 (and (not (alphanumericp symbol-char))
 		      (find symbol-char valid-chars :test #'char=)))
-	     (write-char (funcall (if upcase #'identity #'char-downcase)
-				  symbol-char)
-			 js-str)
+	     (if upcase
+		 (write-char symbol-char js-str)
+		 (write-char (char-downcase symbol-char) js-str))
 	     (setf upcase nil)))))))
 				    
 (defun js-identifier-to-symbol (js-identifier &key (keyword t))
