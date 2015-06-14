@@ -1,12 +1,6 @@
 ;;; SYMBOL-TO-JS-IDENTIFIER
 (test-equal (symbol-to-js-identifier :my-js-var) "myJsVar")
 (test-equal (symbol-to-js-identifier 'my-js-var) "myJsVar")
-(test-equal (symbol-to-js-identifier :%my-js-var) "myJsVar")
-(test-equal (symbol-to-js-identifier '%my-js-var) "myJsVar")
-(test-equal (symbol-to-js-identifier :$my-js-var) "$myJsVar")
-(test-equal (symbol-to-js-identifier '$my-js-var) "$myJsVar")
-(test-equal (symbol-to-js-identifier :_my-js-var) "_myJsVar")
-(test-equal (symbol-to-js-identifier '_my-js-var) "_myJsVar")
 
 ;;; ALIST-TO-JS-OBJECT
 

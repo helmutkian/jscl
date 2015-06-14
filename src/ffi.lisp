@@ -75,24 +75,19 @@
 
 (defun symbol-to-js-identifier (symbol)
   (with-output-to-string (js-str)
-      (let ((upcase nil)
-	    (symbol-str (string symbol))
-	    (symbol-char nil)
-	    (valid-chars '(#\_ #\$)))
-	(dotimes (i (length symbol-str))
-	  (setf symbol-char (char symbol-str i))
-	  (cond
-	    ((char= symbol-char #\-)
-		 (setf upcase t))
-	    ((or (alpha-char-p symbol-char)
-		 (and (digit-char-p symbol-char)
-		      (> i 0))
-		 (and (not (alphanumericp symbol-char))
-		      (find symbol-char valid-chars :test #'char=)))
-	     (if upcase
-		 (write-char symbol-char js-str)
-		 (write-char (char-downcase symbol-char) js-str))
-	     (setf upcase nil)))))))
+    (let ((upcase nil)
+	  (symbol-str (string symbol))
+	  (symbol-char nil))
+      (dotimes (i (length symbol-str))
+	(setf symbol-char (char symbol-str i))
+	(cond
+	  ((char= symbol-char #\-)
+	   (setf upcase t))
+	  (upcase
+	   (setf upcase nil)
+	   (write-char symbol-char js-str))
+	  (t
+	   (write-char (char-downcase symbol-char) js-str)))))))
 				    
 (defun js-identifier-to-symbol (js-identifier &key (keyword t))
   (apply #'intern
