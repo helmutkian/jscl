@@ -89,6 +89,15 @@
 	  (t
 	   (write-char (char-downcase symbol-char) js-str)))))))
 
+(defun js-identifier-to-symbol (js-identifier &key (keyword t))
+  (apply #'intern
+	 (with-output-to-string (symbol-str)
+	     (dotimes (i (length js-identifier))
+	       (when (and (> i 0) (upper-case-p (char js-identifier i)))
+		 (write-char #\- symbol-str))
+	       (write-char (char-upcase (char js-identifier i)) symbol-str)))
+	  (when keyword '(:keyword))))
+
 (defun make-js-object (&rest key-values)
   (let ((obj (new)))
     (do* ((tail key-values (cddr tail))
