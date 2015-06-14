@@ -50,15 +50,19 @@
 (defmacro bind (fn &rest args)
   (let* ((has-this
 	  (and (listp fn) (eql (first fn) 'oget)))
+	 (path
+	  (if has-this
+	      (butlast (rest fn))
+	      '(*root*)))
 	 (this-arg
-	  (if (and has-this (nth 3 fn))
-	      (butlast fn)
-	      '*root*))
+	  (if (rest path)
+	      `(oget ,@path)
+	      (first path)))
 	 (bind-fn
 	  (append (if has-this fn (list 'oget fn))
 		  '("bind"))))
     `(,bind-fn ,this-arg ,@args)))
-
+	      
 (defun alist-to-js-object (alist &key (key #'car) (value #'cadr))
   (let ((obj (new)))
     (dolist (key-value alist obj)
