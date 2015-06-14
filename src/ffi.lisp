@@ -98,7 +98,7 @@
       (setf (oget obj key)
 	    value))))
 
-(defun parse-body (body &key (parse-docstring t))
+(defun parse-body (body)
   (let* ((docstring
 	  (when (and (stringp (first body)) (rest body))
 	    (first body)))
@@ -107,10 +107,7 @@
 	 (done nil))
     (do* ((form (if docstring (rest body) body) (if done form (rest form)))
 	  (expr (first form) (first form)))
-	 ((or done (null form))
-	  (if parse-docstring
-	      (values form declarations docstring)
-	      (values form declarations)))
+	 ((or done (null form)) (values form declarations docstring))
       (cond
 	((and (listp expr) (eql 'declare (first expr)))
 	 (if declarations
@@ -124,7 +121,7 @@
 (defmacro do-js-object ((binding-form js-object &optional result-form) &body body)
   (destructuring-bind (key-var &optional value-var)
       (if (listp binding-form) binding-form (list binding-form))
-    (multiple-value-bind (body-form declarations) (parse-body body :parse-docstring nil)
+    (multiple-value-bind (body-form declarations) (parse-body body)
       (let ((keys (gensym "keys"))
 	    (i (gensym "i"))
 	    (len (gensym "len")))
