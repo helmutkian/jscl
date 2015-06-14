@@ -47,7 +47,6 @@
 
 (setf #j:eval_in_lisp (lambda (form) (eval (read-from-string form))))
 
-
 (defmacro bind (fn &rest args)
   (let* ((has-this
 	  (and (listp fn) (eql (first fn) 'oget)))
@@ -74,23 +73,69 @@
 	     hash-table)
     object))	     
 
-(defmacro js-object (&body body)
-  `(alist-to-js-object
-    (list ,@(mapcar (lambda (key-value) `(list ,@key-value)) body))))
+(defun symbol-to-js-identifier (symbol)
+  (with-output-to-string (js-str)
+    (let ((upcase nil)
+	  (symbol-str (string symbol))
+	  (symbol-char nil))
+      (dotimes (i (length symbol-str))
+	(setf symbol-char (char symbol-str i))
+	(cond
+	  ((char= symbol-char #\-)
+	   (setf upcase t))
+	  (upcase
+	   (setf upcase nil)
+	   (write-char symbol-char js-str))
+	  (t
+	   (write-char (char-downcase symbol-char) js-str)))))))
+
+(defun make-js-object (&rest key-values)
+  (let ((obj (new)))
+    (do* ((tail key-values (cddr tail))
+	  (key (first tail) (first tail))
+	  (value (second tail) (second tail)))
+	 ((null tail) obj)
+      (setf (oget obj key)
+	    value))))
+
+(defun parse-body (body &key (parse-docstring t))
+  (let* ((docstring
+	  (when (and (stringp (first body)) (rest body))
+	    (first body)))
+	 (declarations nil)
+	 (last-declaration nil)
+	 (done nil))
+    (do* ((form (if docstring (rest body) body) (if done form (rest form)))
+	  (expr (first form) (first form)))
+	 ((or done (null form))
+	  (if parse-docstring
+	      (values form declarations docstring)
+	      (values form declarations)))
+      (cond
+	((and (listp expr) (eql 'declare (first expr)))
+	 (if declarations
+	     (setf (cdr last-declaration) (list expr)
+		   last-declaration (cdr last-declaration))
+	     (setf declarations (list expr)
+		   last-declaration declarations)))
+	(t
+	 (setf done t))))))
 
 (defmacro do-js-object ((binding-form js-object &optional result-form) &body body)
   (destructuring-bind (key-var &optional value-var)
       (if (listp binding-form) binding-form (list binding-form))
-    (let ((keys (gensym "keys"))
-	  (i (gensym "i"))
-	  (len (gensym "len")))
-      `(let* ((,keys ((oget *root* "Object" "keys") ,js-object))
-	      (,len (length ,keys)))
-	 (dotimes (,i ,len ,result-form)
-	   (let* ((,key-var (string (aref ,keys ,i)))
-		  ,@(when value-var `((,value-var (oget ,js-object ,key-var)))))
-	     ,@body))))))
-
+    (multiple-value-bind (body-form declarations) (parse-body body :parse-docstring nil)
+      (let ((keys (gensym "keys"))
+	    (i (gensym "i"))
+	    (len (gensym "len")))
+	`(let* ((,keys (#j:Object:keys ,js-object))
+		(,len (length ,keys)))
+	   (dotimes (,i ,len ,result-form)
+	     ,@declarations
+	     (let* ((,key-var (string (aref ,keys ,i)))
+		    ,@(when value-var `((,value-var (oget ,js-object ,key-var)))))
+	       ,@body-form)))))))
+  
 (defun map-js-object (function js-object)
   (do-js-object ((key value) js-object)
     (funcall function key value)))
@@ -105,6 +150,7 @@
     (do-js-object ((js-key js-value) js-object hash-table)
       (setf (gethash hash-table (funcall key js-key))
 	    (funcall value js-value)))))
-  
 
-    
+(defmacro this-bind (this-var &body body)
+  `(let ((,this-var this))
+     ,@body))
