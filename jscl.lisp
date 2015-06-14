@@ -173,7 +173,7 @@
       (dolist (input (append (directory "tests.lisp")
                              (directory "tests/*.lisp")
                              (directory "tests-report.lisp")))
-        (!compile-file input out)))
+        (!compile-file input out :print verbose)))
     (report-undefined-functions)))
 
 

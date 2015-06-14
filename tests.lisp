@@ -45,8 +45,19 @@
   `(expected-failure-fn ,condition ',condition))
 
 (defmacro test-equal (form value)
-  `(test (equal ,form, value)))
+  `(test (equal ,form ,value)))
+
+(defun js-keys (js-object)
+  ((oget *root* "Object" "keys") js-object))
+
+(defun num-js-keys (js-object)
+  (length (js-keys js-object)))
+
+(defmacro test-property-equal (form key expected-value)
+  `(test-equal (oget ,form ,key) ,expected-value))
+
 
 (setq *timestamp* (get-internal-real-time))
 
 (terpri)
+
